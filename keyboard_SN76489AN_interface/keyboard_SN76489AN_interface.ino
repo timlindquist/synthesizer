@@ -24,7 +24,7 @@
 
 
 #define numNotes 120	  //enough to cover MIDI range
-#define numChips 1       //number of physical chips in a track
+#define numChips 2       //number of physical chips in a track
 #define numChipChannels 3  //number of channels on on a chip
 #define numChannels 1   //number of channels in a single track
 #define numTracks 1     //this will use seperate chip hardware
@@ -56,8 +56,7 @@ void setup() {
   teensySerial.begin();
   midiDev.setHandleNoteOn(keyboardNoteOn);
   midiDev.setHandleNoteOff(keyboardNoteOff);
-  digitalWrite(CE, HIGH);
-  digitalWrite(WE, HIGH);
+  
   pinMode(D0, OUTPUT); 
   pinMode(D1, OUTPUT); 
   pinMode(D2, OUTPUT); 
@@ -68,6 +67,9 @@ void setup() {
   pinMode(D7, OUTPUT);  
   pinMode(WE, OUTPUT); 
   pinMode(CE, OUTPUT);
+  pinMode(rOVF, OUTPUT);
+  pinMode(11, OUTPUT);  //CE1
+  
   initialState();  
 }
 
@@ -230,9 +232,12 @@ void volumeAdjust(byte note){
 
 void initialState(){
   int i;
-  silenceAllChannels();
+  
+  digitalWrite(WE, HIGH);
   for(i=0;i<numChips;i++){
 	digitalWrite(CE+i, HIGH);
+  chipEnablePin=CE+i;
+  silenceAllChannels();
   }
 }
 
