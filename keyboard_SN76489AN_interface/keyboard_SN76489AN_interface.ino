@@ -1,5 +1,7 @@
 /** Author: Tim Lindquist
- *  Rev: 1.0
+ *  Rev: 1.2
+ *
+ *  NOTES: writeNOTE and releaseNOTE handle edge cases
  */
 
 #include <USBHost_t36.h>
@@ -16,12 +18,12 @@
 #define D5 5
 #define D6 6
 #define D7 7
-//#define WE 9
-#define CE_0 10
-int CE=10;
-int WE=9;
+#define WE 9
+#define CE 10	//first CE pin
+#define rOVF 8	//resource overflow LED
 
-#define numNotes 120
+
+#define numNotes 120	  //enough to cover MIDI range
 #define numChips 1       //number of physical chips in a track
 #define numChipChannels 3  //number of channels on on a chip
 #define numChannels 1   //number of channels in a single track
@@ -31,6 +33,10 @@ USBHost teensySerial;
 USBHub hub1(teensySerial);
 USBHub hub2(teensySerial);
 MIDIDevice midiDev(teensySerial);
+
+char chipEnablePin=CE;	  //working chip
+char wChannel=0;  //working channel
+char wTrack=0;    //working track
 
 typedef struct{
   bool on=false;
@@ -42,8 +48,7 @@ typedef struct{
 } NOTE;
 
 NOTE keys[numTracks][numChannels][numNotes];  //holds all MIDI keys (note is the index)
-char wChannel=0;  //working channel
-char wTrack=0;    //working track
+
 
 
 void setup() {
@@ -62,21 +67,18 @@ void setup() {
   pinMode(D6, OUTPUT); 
   pinMode(D7, OUTPUT);  
   pinMode(WE, OUTPUT); 
-  pinMode(CE, OUTPUT); 
+  pinMode(CE, OUTPUT);
+  initialState();  
 }
+
+
 
 void loop() {
-  initialState();
-  
-  for(;;){
-    teensySerial.Task();
-    midiDev.read();
-  }
-  
+  teensySerial.Task();
+  midiDev.read();
+  buttonsRead();
+ 
 }
-
-
-
 
 
 
@@ -86,11 +88,12 @@ void keyboardNoteOn(byte channel, byte note, byte velocity) {
   Serial.print(note);
   Serial.print("\tvelocity: ");
   Serial.println(velocity);
+  
   keys[wTrack][wChannel][note].on=true;
   keys[wTrack][wChannel][note].velocity=velocity;
-  claimNote(note);  //assigns available chip and channel then send command
   writeNote(note);
-  volumeAdjust(note);
+  
+  
 }
 
 void keyboardNoteOff(byte channel, byte note, byte velocity) {
@@ -98,46 +101,15 @@ void keyboardNoteOff(byte channel, byte note, byte velocity) {
   Serial.print(note);
   Serial.print("\tvelocity: ");
   Serial.println(velocity);
-  keys[wTrack][wChannel][note].on=false;
-  releaseNote(note);  //frees up resource
-  volumeAdjust(note);
-}
-
-
-void silenceAllChannels(){
-  sendByte(0x9f);
-  sendByte(0xbf);
-  sendByte(0xdf);
-  sendByte(0xff);
-}
-
-
-
-void claimNote(byte note){
-  int i,j,k;
-  int channel;
-  for(i=1;i<=numChips;i++){
-    for(j=1;j<=numChipChannels;j++){
-      for(k=0;k<numNotes;k++){
-        if(keys[wTrack][wChannel][k].chipChannel==j){
-          channel=0;
-          break;
-        }
-        else{
-          channel=j;
-        }
-      }
-      if(channel!=0){
-        keys[wTrack][wChannel][note].chipChannel=j;
-        keys[wTrack][wChannel][note].chip=i;
-        return;
-      }
-    }
-  }
-  keys[wTrack][wChannel][note].chipChannel=0;
-  keys[wTrack][wChannel][note].chip=0;
   
+  keys[wTrack][wChannel][note].on=false;
+  releaseNote(note);
 }
+
+
+
+
+
 
 void writeNote(byte note){
   double freq;
@@ -146,14 +118,13 @@ void writeNote(byte note){
   int i;
   int weight[10]={512,256,128,64,32,16,8,4,2,1};
   byte data;
-
-  //if no available channels return
-  //Serial.print(keys[wTrack][wChannel][note].chipChannel);
-  if(keys[wTrack][wChannel][note].chipChannel==0) return;
-  
+  claimNote(note);  	//reserve resource
+  if(keys[wTrack][wChannel][note].chipChannel==0){
+     resourceOVF(note);
+	 return;
+  }
   freq=pow(2,(note-69)/12.0)*440;
   n=round(CLK/(32.0*freq));  
-  
   //10 bit binary conversion of n
   for(i=0;i<10;i++){
     if(n-weight[i]>=0){
@@ -164,10 +135,6 @@ void writeNote(byte note){
       bin=bin+'0';
     }
   }
-  
-  //update CE for correct chip select 
-  //CE=CE_0+keys[wTrack][wChannel][note].chip-1;
-  
   //construct data for sending 1st byte
   if(keys[wTrack][wChannel][note].chipChannel==1) data=128;
   if(keys[wTrack][wChannel][note].chipChannel==2) data=160;
@@ -177,6 +144,8 @@ void writeNote(byte note){
       data+=weight[i+2];
     }
   }
+  //update CE for correct chip select 
+  chipEnablePin=CE+keys[wTrack][wChannel][note].chip-1;
   sendByte(data);
   
   //construct data for sending 2nd byte
@@ -191,14 +160,52 @@ void writeNote(byte note){
 }
 
 
-//add stuff here to determine by velocity
+void releaseNote(byte note){
+  if(keys[wTrack][wChannel][note].chipChannel==0){
+    resourceOVF(note);
+	return;
+  }
+  //update CE for correct chip select
+  chipEnablePin=CE+keys[wTrack][wChannel][note].chip-1;
+  volumeAdjust(note);
+  //releaseNote
+  keys[wTrack][wChannel][note].chipChannel=0;
+  keys[wTrack][wChannel][note].chip=0;
+}
+
+void claimNote(byte note){
+  int i,j,k;
+  int channel;
+  for(i=1;i<=numChips;i++){
+    for(j=1;j<=numChipChannels;j++){
+      for(k=0;k<numNotes;k++){
+        if((keys[wTrack][wChannel][k].chip==i)&&(keys[wTrack][wChannel][k].chipChannel==j)){
+          channel=0;
+          break;
+        }
+        else{
+          channel=j;
+        }
+      }
+      if(channel!=0){
+        keys[wTrack][wChannel][note].chipChannel=j;
+        keys[wTrack][wChannel][note].chip=i;
+        return;
+      }
+    }
+  }
+  //keys[wTrack][wChannel][note].chipChannel=0;
+  //keys[wTrack][wChannel][note].chip=0;
+  
+}
+
+
 void volumeAdjust(byte note){
   byte data;
-  char attenuation;
-  if(keys[wTrack][wChannel][note].chipChannel==0) return;
+  char att;	//attenuation
+  //if(keys[wTrack][wChannel][note].chipChannel==0) return;
   
-  if(keys[wTrack][wChannel][note].on){  //note on
-    //construct data based off channel
+  if(keys[wTrack][wChannel][note].on){  //note on: construct data based on channel
     if(keys[wTrack][wChannel][note].chipChannel==1) data=144;
     if(keys[wTrack][wChannel][note].chipChannel==2) data=176;
     if(keys[wTrack][wChannel][note].chipChannel==3) data=208;
@@ -208,42 +215,42 @@ void volumeAdjust(byte note){
      * after floor 0=16db, 1=8db, 2=4db, 3=2db, 4=0db 
      * since a velocity range is 0-127 mapping to 128 will secure a value less than 5 to always occure
      */
-    attenuation=floor(map(keys[wTrack][wChannel][note].velocity,0,128,0,5));
-    if(attenuation!=4) data+=pow(2,3-attenuation);
+    att=floor(map(keys[wTrack][wChannel][note].velocity,0,128,0,5));
+    if(att!=4) data+=pow(2,3-att);
   }
-  else{ //note off
-    //construct data based off channel
+  else{ //note off: construct data based off channel
     if(keys[wTrack][wChannel][note].chipChannel==1) data=159;
     if(keys[wTrack][wChannel][note].chipChannel==2) data=191;
     if(keys[wTrack][wChannel][note].chipChannel==3) data=223;
   }
-  
-  //update CE for correct chip select 
-  CE=CE_0+keys[wTrack][wChannel][note].chip-1;
   sendByte(data);
 }
 
-void releaseNote(byte note){
-  //mute note
-  volumeAdjust(note);
-  //releaseNote
-  keys[wTrack][wChannel][note].chip=0;
-  keys[wTrack][wChannel][note].chipChannel=0;
-}
 
-//needs work
+
 void initialState(){
   int i;
   silenceAllChannels();
-  //for(i=0;i<numChips;i++){
-    
- //   digitalWrite(CE, HIGH);
- // }
+  for(i=0;i<numChips;i++){
+	digitalWrite(CE+i, HIGH);
+  }
+}
+
+void silenceAllChannels(){
+  sendByte(0x9f);
+  sendByte(0xbf);
+  sendByte(0xdf);
+  sendByte(0xff);
+}
+
+void resourceOVF(byte note){
+	digitalWrite(rOVF,(keys[wTrack][wChannel][note].on)?HIGH:LOW);
 }
 
 
+
 void sendByte(byte b) {
-  digitalWrite(CE, LOW);
+  digitalWrite(chipEnablePin, LOW);
   digitalWrite(D0,(b&1)?HIGH:LOW);
   digitalWrite(D1,(b&2)?HIGH:LOW);
   digitalWrite(D2,(b&4)?HIGH:LOW);
@@ -255,6 +262,16 @@ void sendByte(byte b) {
   digitalWrite(WE, LOW);
   delay(5);
   digitalWrite(WE, HIGH);
-  digitalWrite(CE, HIGH);
+  digitalWrite(chipEnablePin, HIGH);
 }
+
+
+
+void buttonsRead(){
+	//if(digitalRead(D15)) cycleTrack();
+	
+	
+	
+}
+
 
