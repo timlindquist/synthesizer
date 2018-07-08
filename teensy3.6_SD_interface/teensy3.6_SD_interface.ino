@@ -6,6 +6,20 @@
 
 #include <USBHost_t36.h>
 #include <math.h>
+#include <Audio.h>
+#include <Wire.h>
+#include <SPI.h>
+#include <SD.h>
+#include <SerialFlash.h>
+#include <string.h>
+
+
+//AudioPlaySdWav           playWav1;
+AudioPlaySdRaw            playWav1;
+AudioOutputAnalog        audioOutput;
+AudioConnection          patchCord1(playWav1, 0, audioOutput, 0);
+AudioConnection          patchCord2(playWav1, 1, audioOutput, 1);
+AudioControlSGTL5000     sgtl5000_1;
 
 #define CLK 3579545
 
@@ -22,6 +36,10 @@
 #define CE 10	//first CE pin
 #define rOVF 8	//resource overflow LED
 
+//SD card
+#define SDCARD_CS_PIN    BUILTIN_SDCARD
+#define SDCARD_MOSI_PIN  11  // not actually used
+#define SDCARD_SCK_PIN   13  // not actually used
 
 #define numNotes 120	  //enough to cover MIDI range
 #define numChips 2       //number of physical chips in a track
@@ -53,6 +71,7 @@ NOTE keys[numTracks][numChannels][numNotes];  //holds all MIDI keys (note is the
 
 void setup() {
   Serial.begin(115200);
+  AudioMemory(8);
   teensySerial.begin();
   midiDev.setHandleNoteOn(keyboardNoteOn);
   midiDev.setHandleNoteOff(keyboardNoteOff);
@@ -71,13 +90,25 @@ void setup() {
   pinMode(11, OUTPUT);  //CE1
   
   initialState();  
+
+  SPI.setMOSI(SDCARD_MOSI_PIN);
+  SPI.setSCK(SDCARD_SCK_PIN);
+  if (!(SD.begin(SDCARD_CS_PIN))) {
+    // stop here, but print a message repetitively
+    while (1) {
+      Serial.println("Unable to access the SD card");
+      delay(500);
+    }
+  }
 }
 
 
 
 void loop() {
   teensySerial.Task();
+  for(;;){
   midiDev.read();
+  }
   buttonsRead();
  
 }
@@ -92,7 +123,14 @@ void keyboardNoteOn(byte channel, byte note, byte velocity) {
   Serial.println(velocity);
   keys[wTrack][wChannel][note].on=true;
   keys[wTrack][wChannel][note].velocity=velocity;
-  writeNote(note);
+  //writeNote(note);
+  //String f="bass/" + (String)note + ".wav";
+  String f="bass/" + (String)note + ".raw";
+  const char *filename= f.c_str();
+  playWav1.play(filename);
+  //playWav1.play("bass/69.wav");
+  //playWav1.play("C4.raw");
+  //playFile("C4.wav");
 }
 
 void keyboardNoteOff(byte channel, byte note, byte velocity) {
@@ -102,7 +140,8 @@ void keyboardNoteOff(byte channel, byte note, byte velocity) {
   Serial.println(velocity);
 
   keys[wTrack][wChannel][note].on=false;
-  releaseNote(note);
+  //releaseNote(note);
+  //playWav1.stop();
   
 }
 
@@ -268,6 +307,22 @@ void sendByte(byte b) {
   digitalWrite(chipEnablePin, HIGH);
 }
 
+
+void playFile(const char *filename)
+{
+  Serial.print("Playing file: ");
+  Serial.println(filename);
+
+  // Start playing the file.  This sketch continues to
+  // run while the file plays.
+  playWav1.play(filename);
+
+  // A brief delay for the library read WAV info
+  delay(5);
+
+  // Simply wait for the file to finish playing.
+  while (playWav1.isPlaying());
+}
 
 
 void buttonsRead(){
