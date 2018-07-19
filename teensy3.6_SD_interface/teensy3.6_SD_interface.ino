@@ -63,7 +63,7 @@ MIDIDevice midiDev(teensySerial);
 char wChannel=0;  //working channel
 char wTrack=0;    //working track
 
-String library="kygo";
+String library="bass";
 int decayTime=0;
 
 typedef struct{
