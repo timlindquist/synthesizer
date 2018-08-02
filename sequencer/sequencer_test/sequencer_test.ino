@@ -10,7 +10,7 @@ void setup() {
   pinMode(3, OUTPUT); 
   pinMode(4, OUTPUT); //inhibit
   pinMode(5, OUTPUT); //reset 
-  pinMode(10, INPUT);    
+  pinMode(6, INPUT);    
   //initial state
   digitalWrite(4, HIGH);  //makes set=0
   digitalWrite(5, LOW);   //make reset=0  
@@ -21,11 +21,17 @@ void setup() {
 void loop() {
  int x[16]={0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1};
  int y[16]={1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0};
- set_word(x);
+ //set_word(x);
+ 
  read_word();
+ delay(1000);
+
 
  set_word(y);
+ 
  read_word();
+ delay(1000);
+ set_word(x);
 
 }
 
@@ -62,13 +68,11 @@ void set_word(int x[16]){
 }
 
 boolean read_bit(byte b){
-  int x;
   digitalWrite(0,(b&1)?HIGH:LOW);
   digitalWrite(1,(b&2)?HIGH:LOW);
   digitalWrite(2,(b&4)?HIGH:LOW);
   digitalWrite(3,(b&8)?HIGH:LOW);
-  delay(4);
-  return digitalRead(10);
+  return digitalRead(6);
 }
 
 void read_word(){
