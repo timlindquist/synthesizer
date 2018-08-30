@@ -4,8 +4,8 @@ function filters_buffer
 %   using parameters from digital pot datasheet
 
 close all 
-R0=400; %wiper resistance
-R1=R0+100000;   %resistance range
+R0=1120; %wiper resistance
+R1=88200;   %resistance range
 C=1.3E-7;   %chosen capacitor for optimal 2-20k range: 1/(RC)
 
 fig = uifigure;
