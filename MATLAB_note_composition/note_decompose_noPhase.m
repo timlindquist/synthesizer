@@ -1,4 +1,6 @@
 function note_decompose(filename, n)
+%filename = '*.mp3'
+%n= number of sinusoids
 close all;
 [y,Fs]=audioread(filename);
 sound(y,Fs);
@@ -11,9 +13,10 @@ P1 = P2(1:l/2+1);
 P1(2:end-1) = 2*P1(2:end-1);
 f = Fs*(0:(l/2))/l;
 
-P2_cplx = (Y/l);
-P1_cplx = P2_cplx(1:l/2+1);
-P1_cplx(2:end-1) = 2*P1_cplx(2:end-1);
+P2_neg = (Y/l);
+P1_neg = P2(1:l/2+1)
+P1_neg(2:end-1) = 2*P1(2:end-1);
+
 
 
 %get fundamental frequency
@@ -21,9 +24,8 @@ P1_cplx(2:end-1) = 2*P1_cplx(2:end-1);
 f0=f(I);
 
 %plot period in time domain
-y_time=y(1:round(2*2*Fs/f0));
+y_time=y(1:10*Fs/f0);
 t = 0:1/Fs:(length(y_time)/Fs)-1/Fs;
-
 subplot(2, 2, 1);
 plot(t,y_time);
 title('Time Domain')
@@ -55,6 +57,12 @@ for i=1:length(pks_sort)-1
         end
     end
 end
+%account for negatives
+for i=1:length(pks_sort)
+    if P1_neg(locs_sort(i))<0
+        pks_sort(i)=-pks_sort(i);
+    end
+end
 
 
 %addititive synthesis
@@ -65,11 +73,8 @@ if n>length(pks_sort)
 end
 
 for i=1:n
-   phase=angle(P1_cplx(locs_sort(i)))
-   mag=pks_sort(i);
-   yGen=yGen-mag*sin(2*pi*f(locs_sort(i))*tGen-phase);
+   yGen=yGen+pks_sort(i)*sin(2*pi*f(locs_sort(i))*tGen);
 end
-
 sound(yGen,Fs);
 
 YGen=fft(yGen);
@@ -80,7 +85,7 @@ f = Fs*(0:(l/2))/l;
 
 
 %plot stuff
-y_time=yGen(1:round(2*2*Fs/f0));
+y_time=yGen(1:10*Fs/f0);
 t = 0:1/Fs:(length(y_time)/Fs)-1/Fs;
 
 subplot(2, 2, 3);
@@ -94,7 +99,3 @@ title('FFT')
 xlabel('f (Hz)')
 ylabel('Magnitude')
 xlim([20 20000]) %audible range
-
-
-
-
