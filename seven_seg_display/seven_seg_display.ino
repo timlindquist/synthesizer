@@ -39,7 +39,7 @@ void loop() {
   for(i=0;i<16;i++){
     writeWord(i);
     writeHex(i);
-    delay(1000);
+    delay(100);
   }
    
 //writeWord(0);

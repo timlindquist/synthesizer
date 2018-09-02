@@ -24,7 +24,7 @@ P1_neg(2:end-1) = 2*P1(2:end-1);
 f0=f(I);
 
 %plot period in time domain
-y_time=y(1:10*Fs/f0);
+y_time=y(1:5*Fs/f0);
 t = 0:1/Fs:(length(y_time)/Fs)-1/Fs;
 subplot(2, 2, 1);
 plot(t,y_time);
@@ -85,7 +85,7 @@ f = Fs*(0:(l/2))/l;
 
 
 %plot stuff
-y_time=yGen(1:10*Fs/f0);
+y_time=yGen(1:5*Fs/f0);
 t = 0:1/Fs:(length(y_time)/Fs)-1/Fs;
 
 subplot(2, 2, 3);
