@@ -138,9 +138,9 @@ void set_bit(byte b){
   digitalWrite(2,(b&4)?HIGH:LOW);
   digitalWrite(3,(b&8)?HIGH:LOW);
   delay(1);
-  digitalWrite(4, LOW);  //makes set=1
+  digitalWrite(4, LOW);  //makes set=1  INH=LOW=false
   delay(1);
-  digitalWrite(4, HIGH);  //makes set=0
+  digitalWrite(4, HIGH);  //makes set=0 INH=HIGH=true
   delay(1);
 }
 
