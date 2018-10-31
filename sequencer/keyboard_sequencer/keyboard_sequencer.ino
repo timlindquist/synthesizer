@@ -766,6 +766,7 @@ void pinSetup(){
   pinMode(C3, OUTPUT);
   pinMode(PP_LED_SIG, OUTPUT);
   pinMode(R_LED_SIG, OUTPUT);
+  digitalWrite(INH0, HIGH);
   digitalWrite(INH1, HIGH);
   digitalWrite(INH3, HIGH);
   digitalWrite(INH2, HIGH);

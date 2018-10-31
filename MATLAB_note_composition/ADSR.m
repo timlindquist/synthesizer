@@ -1,4 +1,5 @@
 function ADSR(A,D,S,R,Ts)
+%AUTHOR: Tim Lindquist
 % A = Attack time (ms)
 % D = Delay time (ms)
 % S = Sustain level (0-1 multiplication factor)
@@ -7,13 +8,12 @@ function ADSR(A,D,S,R,Ts)
 % ex: ADSR(100,150,0.7,500,1000)
 
 close all;
-
+f=440;
 
 %base waveform=square wave @ 440Hz normalized to max amplitude=1
 dt=0.0001;
-t = 0:dt:.2;  %seconds
-x = square(2*pi*440*t);
-
+t = 0:dt:(A+D+S+R+Ts)/1000;  %seconds
+x = square(2*pi*f*t);
 
 figure;
 subplot(2,1,1);
@@ -25,6 +25,7 @@ title('Base Waveform');
 
 %amplitude vector
 amp=zeros(1,length(t));
+
 %attack linear rise to T_A
 for i=1:round(A/(1000*dt));
     amp(i)=1/round(A/(1000*dt))*i;
@@ -48,7 +49,6 @@ for i=i:round((A+D+Ts+R)/(1000*dt));
     amp(i)=(0-S)/round((R)/(1000*dt))*j+S;
     j=j+1;
 end
-
 
 x=x.*amp;
 subplot(2,1,2);

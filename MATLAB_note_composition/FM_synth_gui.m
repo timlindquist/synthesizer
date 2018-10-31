@@ -1,4 +1,12 @@
 function FM_synth_gui
+%AUTHOR: Tim Lindquist
+%Interactive FM synthesis program
+%Top Left Knob: Carrier Frequency
+%Top Right Knob: Carrier Amplitude
+%Top Dropdown: Carrier Frequency Multiplier
+%Bottom Left Knob: Modulator Frequency
+%Bottom Right Knob: Modulator Amplitude
+%Bottom Dropdown: Modulator Frequency Multiplier
 close all;
 
 fig = uifigure;

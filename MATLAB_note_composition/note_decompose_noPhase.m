@@ -1,4 +1,6 @@
-function note_decompose(filename, n)
+function note_decompose_noPhase(filename, n)
+%AUTHOR: Tim Lindquist
+%Program decomposes mp3 periodic sound into n sinusoids
 %filename = '*.mp3'
 %n= number of sinusoids
 close all;

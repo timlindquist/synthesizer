@@ -15,12 +15,19 @@
 #define D5 5
 #define D6 6
 #define D7 7
-#define a1 8
-#define a0 9
+#define a1 9
+#define a0 8
 #define nRD 10
 #define nWR 11
-#define nCS 12
-#define nIRQ 24
+#define SEL0 12
+#define SEL1 24
+#define SEL2 25
+#define SEL3 26
+#define INH0 27
+#define INH1  28
+#define INH2  29
+#define INH3  30
+
 
 void setup() {
   pinMode(D0, OUTPUT);
@@ -35,14 +42,32 @@ void setup() {
   pinMode(a0, OUTPUT);
   pinMode(nRD, OUTPUT);
   pinMode(nWR, OUTPUT);
-  pinMode(nCS, OUTPUT);
-  pinMode(nIRQ, INPUT);
+  pinMode(SEL0, OUTPUT); 
+  pinMode(SEL1, OUTPUT); 
+  pinMode(SEL2, OUTPUT); 
+  pinMode(SEL3, OUTPUT); 
+   
+   pinMode(INH0, OUTPUT);
+   pinMode(INH1, OUTPUT);
+  pinMode(INH2, OUTPUT);
+  pinMode(INH3, OUTPUT);
 
+
+digitalWrite(INH0, HIGH);
+ digitalWrite(INH1, HIGH);
+  digitalWrite(INH3, HIGH);
+  digitalWrite(INH2, HIGH);
+  
   digitalWrite(a1, LOW);
   digitalWrite(a0, LOW);
   digitalWrite(nRD, HIGH);
   digitalWrite(nWR, HIGH);
-  digitalWrite(nCS, HIGH);
+  digitalWrite(INH2, HIGH);
+
+  digitalWrite(SEL0, LOW);
+  digitalWrite(SEL1, LOW);
+  digitalWrite(SEL2, LOW);
+  digitalWrite(SEL3, LOW);
   
 
 }
@@ -114,7 +139,7 @@ static void setreg(uint8_t reg, uint8_t data) {
 
 
 static void write_ym(uint8_t data) {
-  digitalWrite(nCS, LOW);
+  digitalWrite(INH2, LOW);
   digitalWrite(D0,(data&1)?HIGH:LOW);
   digitalWrite(D1,(data&2)?HIGH:LOW);
   digitalWrite(D2,(data&4)?HIGH:LOW);
@@ -128,5 +153,5 @@ static void write_ym(uint8_t data) {
   delayMicroseconds(1);
   digitalWrite(nWR, HIGH);
   delayMicroseconds(1);
-  digitalWrite(nCS, HIGH);
+  digitalWrite(INH2, HIGH);
 }
