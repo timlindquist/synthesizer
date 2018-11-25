@@ -89,6 +89,7 @@ while(1)
         title('FM Output');
         xlabel('Time');
         ylabel('Magnitude');
+   
 
         l=length(y);
         Y=fft(y);

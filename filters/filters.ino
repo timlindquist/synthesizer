@@ -60,8 +60,8 @@ void loop() {
   
   for(;;){
     //resistors
-    LP_val=map(analogRead(LP_POT),0,1023,0,253);
-    HP_val=map(analogRead(HP_POT),0,1023,0,253);
+    LP_val=1023-map(analogRead(LP_POT),0,1023,0,253);
+    HP_val=1023-map(analogRead(HP_POT),0,1023,0,253);
     if(LP_val!=LP_val_prev || HP_val!=HP_val_prev) transmit(LP_val, HP_val);
     LP_val_prev=LP_val;
     HP_val_prev=HP_val;
